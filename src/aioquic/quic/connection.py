@@ -240,6 +240,7 @@ class QuicConnection:
         retry_source_connection_id: Optional[bytes] = None,
         session_ticket_fetcher: Optional[tls.SessionTicketFetcher] = None,
         session_ticket_handler: Optional[tls.SessionTicketHandler] = None,
+        app_destination_connection_id: Optional[bytes] = None,
     ) -> None:
         if configuration.is_client:
             assert (
@@ -307,9 +308,18 @@ class QuicConnection:
         self._pacing_at: Optional[float] = None
         self._packet_number = 0
         self._parameters_received = False
-        self._peer_cid = QuicConnectionId(
-            cid=os.urandom(configuration.connection_id_length), sequence_number=None
-        )
+        if app_destination_connection_id is None:
+            self._peer_cid = QuicConnectionId(
+                cid=os.urandom(configuration.connection_id_length), sequence_number=None
+            )
+        else:
+            if len(app_destination_connection_id) < configuration.connection_id_length:
+                app_destination_connection_id = os.urandom(
+                    configuration.connection_id_length - len(app_destination_connection_id)
+                ) + app_destination_connection_id
+            self._peer_cid = QuicConnectionId(
+                cid=app_destination_connection_id, sequence_number=None
+            )
         self._peer_cid_available: List[QuicConnectionId] = []
         self._peer_cid_sequence_numbers: Set[int] = set([0])
         self._peer_token = b""
